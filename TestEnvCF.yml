@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  MyEC2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-00e8b55a2e841be44
+      SubnetId: !Ref FirstSubnet
+  FirstSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: 10.1.0.0/24
+      VpcId: !Ref MyVPC
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      EnableDnsHostnames: true
+  ProjectPipelineSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+        GroupDescription: Security group for my VPC
+        VpcId: !Ref MyVPC
+
+
+
+
+
+
+
