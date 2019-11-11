@@ -7,6 +7,8 @@ Resources:
       ImageId: ami-00e8b55a2e841be44
       SubnetId: !Ref NetDevOneSubnetOne
       KeyName: NetDevKeys
+      SecurityGroupIds:
+        - !Ref NetDevOneSG
   NetDevTwoEC2:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -14,6 +16,8 @@ Resources:
       ImageId: ami-00e8b55a2e841be44
       SubnetId: !Ref NetDevTwoSubnetOne
       KeyName: NetDevKeys
+      SecurityGroupIds:
+      - !Ref NetDevTwoSG
   NetDevOneVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
