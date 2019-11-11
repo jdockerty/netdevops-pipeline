@@ -1,28 +1,134 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
-  MyEC2:
+  NetDevOneEC2:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: t2.micro
       ImageId: ami-00e8b55a2e841be44
-      SubnetId: !Ref FirstSubnet
-  FirstSubnet:
-    Type: "AWS::EC2::Subnet"
+      SubnetId: !Ref NetDevOneSubnetOne
+      KeyName: NetDevKeys
+  NetDevTwoEC2:
+    Type: 'AWS::EC2::Instance'
     Properties:
-      CidrBlock: 10.1.0.0/24
-      VpcId: !Ref MyVPC
-  MyVPC:
+      InstanceType: t2.micro
+      ImageId: ami-00e8b55a2e841be44
+      SubnetId: !Ref NetDevTwoSubnetOne
+      KeyName: NetDevKeys
+  NetDevOneVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
       CidrBlock: 10.1.0.0/16
       EnableDnsHostnames: true
-  ProjectPipelineSG:
+  NDOneVPCGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: {}
+  NDTwoVPCGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: {}
+  NDOneGatewayAttach:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref NDOneVPCGateway
+      VpcId: !Ref NetDevOneVPC
+  NDTwoGatewayAttach:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref NDTwoVPCGateway
+      VpcId: !Ref NetDevTwoVPC
+  NetDevTwoVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.2.0.0/16
+      EnableDnsHostnames: true
+  NetDevOneSubnetOne:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.1.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref NetDevOneVPC
+  NetDevTwoSubnetOne:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.2.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref NetDevTwoVPC
+  NetDevVPCPeer:
+    Type: 'AWS::EC2::VPCPeeringConnection'
+    Properties:
+      PeerVpcId: !Ref NetDevTwoVPC
+      VpcId: !Ref NetDevOneVPC
+  NetDevOneRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref NetDevOneVPC
+  NetDevOneRTAssoc:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref NetDevOneRouteTable
+      SubnetId: !Ref NetDevOneSubnetOne
+  NetDevTwoRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref NetDevTwoVPC
+  NetDevTwoRTAssoc:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref NetDevTwoRouteTable
+      SubnetId: !Ref NetDevTwoSubnetOne
+  NetDevOneRouteToTwo:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref NetDevOneRouteTable
+      DestinationCidrBlock: 10.2.0.0/16
+      VpcPeeringConnectionId: !Ref NetDevVPCPeer
+  NetDevTwoRouteToTwo:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref NetDevTwoRouteTable
+      DestinationCidrBlock: 10.1.0.0/16
+      VpcPeeringConnectionId: !Ref NetDevVPCPeer
+  NetDevOneSG:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-        GroupDescription: Security group for my VPC
-        VpcId: !Ref MyVPC
-
-
+      GroupDescription: 'NetDev SG'
+      VpcId: !Ref NetDevOneVPC
+      SecurityGroupEgress:
+      - IpProtocol: -1
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+      - IpProtocol: -1
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+  NetDevTwoSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'NetDev SG'
+      VpcId: !Ref NetDevTwoVPC
+      SecurityGroupEgress:
+      - IpProtocol: -1
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+      - IpProtocol: -1
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+  NetDevOneDefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref NetDevOneRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref NDOneVPCGateway
+  NetDevTwoDefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref NetDevTwoRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref NDTwoVPCGateway
 
 
 

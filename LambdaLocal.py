@@ -10,5 +10,6 @@ def lambda_handler(event,context):
         'body': json.dumps('Hello from Lambda!')
     }
 context = 1
+
 print(lambda_handler(event,context))
 
