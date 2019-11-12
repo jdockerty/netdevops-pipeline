@@ -1,0 +1,6 @@
+1 - Static code analysis for the TestEnv (Lambda function to parse YML)
+2 - Pipeline deploys test infrastructure
+
+Extension Tasks
+Integrate GNS3 Cisco Router for BGP peering with VPN Gateway
+Expand VPC Peering -> Single Hub VPC with multiple spokes
