@@ -15,7 +15,6 @@ Resources:
       InstanceType: t2.micro
       ImageId: ami-00e8b55a2e841be44
       SubnetId: !Ref NetDevTwoSubnetOne
-      KeyName: NetDevKeys
       SecurityGroupIds:
       - !Ref NetDevTwoSG
   NetDevOneVPC:
@@ -26,19 +25,11 @@ Resources:
   NDOneVPCGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties: {}
-  NDTwoVPCGateway:
-    Type: 'AWS::EC2::InternetGateway'
-    Properties: {}
   NDOneGatewayAttach:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
       InternetGatewayId: !Ref NDOneVPCGateway
       VpcId: !Ref NetDevOneVPC
-  NDTwoGatewayAttach:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
-    Properties:
-      InternetGatewayId: !Ref NDTwoVPCGateway
-      VpcId: !Ref NetDevTwoVPC
   NetDevTwoVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
@@ -127,12 +118,6 @@ Resources:
       RouteTableId: !Ref NetDevOneRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref NDOneVPCGateway
-  NetDevTwoDefaultRoute:
-    Type: 'AWS::EC2::Route'
-    Properties:
-      RouteTableId: !Ref NetDevTwoRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref NDTwoVPCGateway
 
 
 
