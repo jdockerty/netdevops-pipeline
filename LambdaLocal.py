@@ -31,7 +31,7 @@ event = {
           "arn": "arn:aws:s3:::example-bucket"
         },
         "object": {
-          "key": "YAML/TestEnvCF.yml",
+          "key": "TestEnvCF.json",
           "size": 1024,
           "eTag": "0123456789abcdef0123456789abcdef",
           "sequencer": "0A1B2C3D4E5F678901"
@@ -43,19 +43,19 @@ event = {
 context = 1
 #AKIAT5HAPIXFC2GUTN6E
 #GTr1GN4aBI69DZcWWmn7NuUX+T/vZQwKvrgHr76a
-
-def static_analysis_file(event,context):
-    s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
-                      aws_secret_access_key=os.environ['secret_access_key'])
-
-    data = s3.get_object(Bucket='projectpipelinesource', Key='YAML/TestEnvCF.yml')
-    content = data['Body'].read()
-    return str(content)
-    # bucket_name = s3.Object(event['Records'][0]['s3']['bucket']['name'])
-    # data_object = s3.Object(event['Records'][0]['s3']['object']['key'])
-    # object_body = data_object.get()['Body'].read()
+def get_resources(event):
+  s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
+                    aws_secret_access_key=os.environ['secret_access_key'])
+  bucket_name = event['Records'][0]['s3']['bucket']['name']
+  data_key = event['Records'][0]['s3']['object']['key']
+  data_object = s3.get_object(Bucket=bucket_name, Key=data_key)
+  content = json.loads(data_object['Body'].read())
+  return (content['Resources'])
 
 
+def static_analysis_file(event, context):
+  CF_resources = get_resources(event)
+  print(CF_resources)
 
 
 static_analysis_file(event,context)
