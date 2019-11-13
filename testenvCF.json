@@ -1,0 +1,182 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "136f5721-60e4-4ccf-aa9e-c8504db491a8": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 90,
+                    "y": 300
+                },
+                "z": 2,
+                "parent": "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                "embeds": [],
+                "iscontainedinside": [
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97"
+                ]
+            },
+            "907cb680-e012-497d-a7b3-f8dec491d536": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 230,
+                    "y": 300
+                },
+                "z": 2,
+                "parent": "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                "embeds": [],
+                "iscontainedinside": [
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97",
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97"
+                ]
+            },
+            "2d1203d9-b727-476f-9660-86db36c134eb": {
+                "size": {
+                    "width": 530,
+                    "height": 380
+                },
+                "position": {
+                    "x": 10,
+                    "y": 170
+                },
+                "z": 0,
+                "embeds": [
+                    "dd702614-3e02-4d3e-9c12-1dd442576e97"
+                ]
+            },
+            "dd702614-3e02-4d3e-9c12-1dd442576e97": {
+                "size": {
+                    "width": 270,
+                    "height": 170
+                },
+                "position": {
+                    "x": 50,
+                    "y": 240
+                },
+                "z": 1,
+                "parent": "2d1203d9-b727-476f-9660-86db36c134eb",
+                "embeds": [
+                    "907cb680-e012-497d-a7b3-f8dec491d536",
+                    "136f5721-60e4-4ccf-aa9e-c8504db491a8"
+                ],
+                "iscontainedinside": [
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb",
+                    "2d1203d9-b727-476f-9660-86db36c134eb"
+                ]
+            },
+            "943014ef-bae9-4a81-bc98-6662bc1cad4a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -130,
+                    "y": 360
+                },
+                "z": 0,
+                "embeds": [],
+                "iscontainedinside": [
+                    "2d1203d9-b727-476f-9660-86db36c134eb"
+                ]
+            }
+        }
+    },
+    "Resources": {
+        "EC2InstanceOne": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId" : "ami-00e8b55a2e841be44",
+                "InstanceType" : "t2.micro",
+                "SecurityGroupIds" : [{"Ref" : "ProjectPipelineSG"}]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "136f5721-60e4-4ccf-aa9e-c8504db491a8"
+                }
+            }
+        },
+        "EC2InstanceTwo": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId" : "ami-00e8b55a2e841be44",
+                "InstanceType" : "t2.micro",
+                "SecurityGroupIds" : [{"Ref" : "ProjectPipelineSG"}]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "907cb680-e012-497d-a7b3-f8dec491d536"
+                }
+            }
+        },
+        "VPCProjectPipeline": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.1.0.0/16",
+                "EnableDnsHostnames": "true"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "2d1203d9-b727-476f-9660-86db36c134eb"
+                }
+            }
+        },
+        "PublicSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "10.1.0.0/24",
+                "AvailabilityZone": "eu-west-2a",
+                "VpcId": {
+                    "Ref": "VPCProjectPipeline"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "dd702614-3e02-4d3e-9c12-1dd442576e97"
+                }
+            }
+        },
+        "ProjectPipelineSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SG for Project Pipeline VPC",
+                "VpcId": {
+                    "Ref": "VPCProjectPipeline"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "943014ef-bae9-4a81-bc98-6662bc1cad4a"
+                }
+            }
+        }
+    }
+}
