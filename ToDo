@@ -4,3 +4,9 @@
 Extension Tasks
 Integrate GNS3 Cisco Router for BGP peering with VPN Gateway
 Expand VPC Peering -> Single Hub VPC with multiple spokes
+
+
+
+IDEA - For Terraform deployment have the TF file saved in S3, deploy EC2 from basic CF template that references the S3 bucket
+and runs the TF file that it pulls off S3?
+(https://ruempler.eu/2017/02/26/continuous-infrastructure-delivery-pipeline-aws-codepipeline-codebuild-terraform/)
