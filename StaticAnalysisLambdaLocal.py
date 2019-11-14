@@ -41,11 +41,19 @@ event = {
   ]
 }
 context = 1
-#AKIAT5HAPIXFC2GUTN6E
-#GTr1GN4aBI69DZcWWmn7NuUX+T/vZQwKvrgHr76a
+def read_local_creds(file="LocalCredentials"):
+    cred_list = []
+    with open(file) as creds:
+        for line in creds:
+            cred_list.append(line.strip("\n\r"))
+
+    return cred_list
+
 def get_resources(event):
-  s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
-                    aws_secret_access_key=os.environ['secret_access_key'])
+  s3 = boto3.client('s3', aws_access_key_id=read_local_creds()[0],
+                    aws_secret_access_key=read_local_creds()[1])
+  # in Lambda this becomes environment variables os.environ['access_key'] and os.environ['secret_access_key']
+
   bucket_name = event['Records'][0]['s3']['bucket']['name']
   data_key = event['Records'][0]['s3']['object']['key']
   data_object = s3.get_object(Bucket=bucket_name, Key=data_key)
