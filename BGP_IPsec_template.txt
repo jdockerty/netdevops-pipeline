@@ -1,0 +1,147 @@
+!==================
+!IKE Phase I Configs - Tunnel1
+!===================
+crypto isakmp policy 200
+  encryption aes 128
+  authentication pre-share  
+  group 2  
+  lifetime 28800
+  hash sha
+exit
+
+!
+crypto keyring keyring-vpn-01 
+  local-address {0}
+  pre-shared-key address {1} key 1qazxsw2
+exit
+!
+crypto isakmp profile isakmp-vpn-01
+  local-address {0}
+  match identity address {1}
+  keyring keyring-vpn-01
+exit
+
+
+!==================
+!IKE Phase 2 Configs - Tunnel1 
+!===================
+crypto ipsec transform-set ipsec-prop-vpn-01 esp-aes 128 esp-sha-hmac
+  mode tunnel
+exit
+!
+crypto ipsec profile ipsec-vpn-01
+  set pfs group2
+  set security-association lifetime seconds 3600
+  set transform-set ipsec-prop-vpn-01
+exit
+!
+crypto ipsec df-bit clear
+crypto isakmp keepalive 10 10 on-demand
+crypto ipsec security-association replay window-size 128
+crypto ipsec fragmentation before-encryption
+
+!==================
+!Tunnel 1 Configs
+!===================
+interface Tunnel1
+  ip address 169.254.45.66 255.255.255.252
+  ip virtual-reassembly
+  tunnel source {0}
+  tunnel destination {1}
+  tunnel mode ipsec ipv4
+  tunnel protection ipsec profile ipsec-vpn-01
+  ip tcp adjust-mss 1379
+  no shutdown
+exit
+
+!==================
+!BGP Configs - Tunnel1 
+!===================
+router bgp 65000
+  neighbor 169.254.45.65 remote-as 64512
+  neighbor 169.254.45.65 activate
+  neighbor 169.254.45.65 timers 10 30 30
+  address-family ipv4 unicast
+    neighbor 169.254.45.65 remote-as 64512
+    neighbor 169.254.45.65 timers 10 30 30
+    neighbor 169.254.45.65 default-originate
+    neighbor 169.254.45.65 activate
+    neighbor 169.254.45.65 soft-reconfiguration inbound
+    network 0.0.0.0
+  exit
+exit
+
+
+!==================
+!IKE Phase I Configs - Tunnel2
+!===================
+crypto isakmp policy 201
+  encryption aes 128
+  authentication pre-share
+  group 2
+  lifetime 28800
+  hash sha
+exit
+!
+crypto keyring keyring-vpn-02
+  local-address {0}
+  pre-shared-key address {2} key 1qazxsw2
+exit
+!
+crypto isakmp profile isakmp-vpn-02
+  local-address {0}
+  match identity address {2}
+  keyring keyring-vpn-02
+exit
+!
+!==================
+!IKE Phase 2 Configs - Tunnel2
+!===================
+crypto ipsec transform-set ipsec-prop-vpn-02 esp-aes 128 esp-sha-hmac
+  mode tunnel
+exit
+!
+crypto ipsec profile ipsec-vpn-02
+  set pfs group2
+  set security-association lifetime seconds 3600
+  set transform-set ipsec-prop-vpn-02
+exit
+!
+crypto ipsec df-bit clear
+crypto isakmp keepalive 10 10 on-demand
+crypto ipsec security-association replay window-size 128
+crypto ipsec fragmentation before-encryption
+!
+!
+!==================
+!Tunnel 2 Configs - Tunnel2
+!===================
+interface Tunnel2
+  ip address 169.254.45.34 255.255.255.252
+  ip virtual-reassembly
+  tunnel source {0}
+  tunnel destination {2}
+  tunnel mode ipsec ipv4
+  tunnel protection ipsec profile ipsec-vpn-02
+  ip tcp adjust-mss 1379
+  no shutdown
+exit
+!
+!
+!==================
+!BGP Configs - Tunnel2
+!===================
+router bgp 65000
+  neighbor 169.254.45.33 remote-as 64512
+  neighbor 169.254.45.33 activate
+  neighbor 169.254.45.33 timers 10 30 30
+  address-family ipv4 unicast
+    neighbor 169.254.45.33 remote-as 64512
+    neighbor 169.254.45.33 timers 10 30 30
+    neighbor 169.254.45.33 default-originate
+    neighbor 169.254.45.33 activate
+    neighbor 169.254.45.33 soft-reconfiguration inbound
+    network 0.0.0.0
+  exit
+exit
+!
