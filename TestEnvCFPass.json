@@ -251,7 +251,17 @@
                 "Type": "ipsec.1",
                 "VpnGatewayId": {
                     "Ref": "NetDevVPNGW"
-                }
+                },
+                "VpnTunnelOptionsSpecifications": [
+                    {
+                        "PreSharedKey": "1qazxsw2",
+                        "TunnelInsideCidr": "169.254.45.64/30"
+                    },
+                    {
+                        "PreSharedKey": "1qazxsw2",
+                        "TunnelInsideCidr": "169.254.45.32/30"
+                    }
+                ]
             }
         },
         "NetDevVPNAttach": {

@@ -1,11 +1,4 @@
 AWSTemplateFormatVersion: 2010-09-09
-Parameters:
-  PublicIPAddressForPeering:
-    Type: String
-    Description: This must be a valid IP address.
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP address of the form x.x.x.x.
-
 Resources:
   NetDevOneEC2:
     Type: 'AWS::EC2::Instance'
@@ -137,7 +130,7 @@ Resources:
     Type: 'AWS::EC2::CustomerGateway'
     Properties:
       BgpAsn: 65000
-      IpAddress: !Ref PublicIPAddressForPeering
+      IpAddress: "79.69.154.80"
       Type: 'ipsec.1'
   NetDevVPNGW:
     Type: 'AWS::EC2::VPNGateway'
@@ -149,6 +142,13 @@ Resources:
       CustomerGatewayId: !Ref NetDevCustGW
       Type: 'ipsec.1'
       VpnGatewayId: !Ref NetDevVPNGW
+      VpnTunnelOptionsSpecifications:
+        -
+          PreSharedKey: "1qazxsw2"
+          TunnelInsideCidr: "169.254.45.64/30"
+        -
+          PreSharedKey: "1qazxsw2"
+          TunnelInsideCidr: "169.254.45.32/30"
   NetDevVPNAttach:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
