@@ -3,6 +3,9 @@
 
 General flow = Deploy pipeline with CF -> test CF templates (Pass/Fail), pass = deploy infrastructure, fail = don't and return reason.
 
+FIX IPSEC CONFIG/BGP PEERING ON CISCO ROUTER
+TRY USING SINGLE TUNNEL FIRST AND EXPAND TO 2 IF POSSIBLE.
+
 Extension Tasks
 Integrate GNS3 Cisco Router for BGP peering with VPN Gateway
 Expand VPC Peering -> Single Hub VPC with multiple spokes

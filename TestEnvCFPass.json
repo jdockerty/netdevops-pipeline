@@ -1,13 +1,5 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Parameters": {
-        "PublicIPAddressForPeering": {
-            "Type": "String",
-            "Description": "This must be a valid IP address.",
-            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})",
-            "ConstraintDescription": "must be a valid IP address of the form x.x.x.x."
-        }
-    },
     "Resources": {
         "NetDevOneEC2": {
             "Type": "AWS::EC2::Instance",
@@ -240,9 +232,7 @@
             "Type": "AWS::EC2::CustomerGateway",
             "Properties": {
                 "BgpAsn": 65000,
-                "IpAddress": {
-                    "Ref": "PublicIPAddressForPeering"
-                },
+                "IpAddress": "79.69.154.80",
                 "Type": "ipsec.1"
             }
         },
