@@ -50,7 +50,7 @@ interface Tunnel1
   tunnel destination {1}
   tunnel mode ipsec ipv4
   tunnel protection ipsec profile ipsec-vpn-01
-  ip tcp adjust-mss 1379
+  ip tcp adjust-mss 1350
   no shutdown
 exit
 
@@ -122,7 +122,7 @@ interface Tunnel2
   tunnel destination {2}
   tunnel mode ipsec ipv4
   tunnel protection ipsec profile ipsec-vpn-02
-  ip tcp adjust-mss 1379
+  ip tcp adjust-mss 1350
   no shutdown
 exit
 !
