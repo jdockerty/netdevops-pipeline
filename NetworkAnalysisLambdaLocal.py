@@ -28,7 +28,7 @@ def parse_network_CF(resources_data):
                             return data_response
                         else:
                             data_response['{}-VPC-CidrBlock'.format(key)] = \
-                                {vpc_properties['CidrBlock'] : IP(vpc_properties['CidrBlock']).iptype()}
+                                {vpc_properties['CidrBlock']: IP(vpc_properties['CidrBlock']).iptype()}
 
             except KeyError:
                 print("Properties is required within a VPC as a CidrBlock is a mandatory element.")
