@@ -1,5 +1,34 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
+    "Outputs": {
+        "NetDevOneEC2IP": {
+            "Description": "Private (Internal) IP of the EC2 Instance in the NetDevOne VPC for testing purposes.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "NetDevOneEC2",
+                    "PrivateIp"
+                ]
+            }
+        },
+        "NetDevTwoEC2IP": {
+            "Description": "Private (Internal) IP of the EC2 Instance in the NetDevTwo VPC for testing purposes.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "NetDevTwoEC2",
+                    "PrivateIp"
+                ]
+            }
+        },
+        "NetDevThreeEC2IP": {
+            "Description": "Private (Internal) IP of the EC2 Instance in the NetDevTwo VPC for testing purposes.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "NetDevThreeEC2",
+                    "PrivateIp"
+                ]
+            }
+        }
+    },
     "Resources": {
         "NetDevOneEC2": {
             "Type": "AWS::EC2::Instance",
@@ -59,6 +88,119 @@
             "Properties": {
                 "CidrBlock": "10.2.0.0/16",
                 "EnableDnsHostnames": true
+            }
+        },
+        "NetDevThreeVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.3.0.0/16",
+                "EnableDnsHostnames": true
+            }
+        },
+        "NetDevThreeSubnetOne": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "10.3.0.0/24",
+                "MapPublicIpOnLaunch": true,
+                "VpcId": {
+                    "Ref": "NetDevThreeVPC"
+                }
+            }
+        },
+        "NetDevVPCPeerThreeToOne": {
+            "Type": "AWS::EC2::VPCPeeringConnection",
+            "Properties": {
+                "PeerVpcId": {
+                    "Ref": "NetDevOneVPC"
+                },
+                "VpcId": {
+                    "Ref": "NetDevThreeVPC"
+                }
+            }
+        },
+        "NetDevThreeRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "NetDevThreeVPC"
+                }
+            }
+        },
+        "NetDevThreeRouteToOne": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "NetDevThreeRouteTable"
+                },
+                "DestinationCidrBlock": "10.1.0.0/16",
+                "VpcPeeringConnectionId": {
+                    "Ref": "NetDevVPCPeerThreeToOne"
+                }
+            }
+        },
+        "NetDevThreeEC2": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType": "t2.micro",
+                "ImageId": "ami-00e8b55a2e841be44",
+                "SubnetId": {
+                    "Ref": "NetDevThreeSubnetOne"
+                },
+                "KeyName": "NetDevKeys",
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "NetDevThreeSG"
+                    }
+                ]
+            }
+        },
+        "NetDevThreeSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "NetDev SG",
+                "VpcId": {
+                    "Ref": "NetDevThreeVPC"
+                },
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
             }
         },
         "NetDevOneSubnetOne": {
@@ -142,7 +284,19 @@
                 }
             }
         },
-        "NetDevTwoRouteToTwo": {
+        "NetDevOneRouteToThree": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "NetDevOneRouteTable"
+                },
+                "DestinationCidrBlock": "10.3.0.0/16",
+                "VpcPeeringConnectionId": {
+                    "Ref": "NetDevVPCPeer"
+                }
+            }
+        },
+        "NetDevTwoRouteToOne": {
             "Type": "AWS::EC2::Route",
             "Properties": {
                 "RouteTableId": {
@@ -163,29 +317,41 @@
                 },
                 "SecurityGroupEgress": [
                     {
-                        "IpProtocol": 22,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "ToPort": 22,
+                        "FromPort": 22,
                         "CidrIp": "0.0.0.0/0"
                     },
                     {
-                        "IpProtocol": 80,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
                         "CidrIp": "0.0.0.0/0"
                     }
                 ],
                 "SecurityGroupIngress": [
                     {
-                        "IpProtocol": 22,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "ToPort": 22,
+                        "FromPort": 22,
                         "CidrIp": "0.0.0.0/0"
                     },
                     {
-                        "IpProtocol": 80,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
                         "CidrIp": "0.0.0.0/0"
                     }
                 ]
@@ -200,17 +366,41 @@
                 },
                 "SecurityGroupEgress": [
                     {
-                        "IpProtocol": -1,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
                         "CidrIp": "0.0.0.0/0"
                     }
                 ],
                 "SecurityGroupIngress": [
                     {
-                        "IpProtocol": -1,
-                        "FromPort": 0,
-                        "ToPort": 65535,
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": -1,
+                        "ToPort": -1,
                         "CidrIp": "0.0.0.0/0"
                     }
                 ]
@@ -228,11 +418,24 @@
                 }
             }
         },
+        "NetDevOneRouteToPrem": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "NetDevOneRouteTable"
+                },
+                "DestinationCidrBlock": "192.168.1.0/24",
+                "TransitGatewayId": {
+                    "Ref": "NetDevTransitGW"
+                }
+            },
+            "DependsOn": "NetDevTransitGWAttach"
+        },
         "NetDevCustGW": {
             "Type": "AWS::EC2::CustomerGateway",
             "Properties": {
                 "BgpAsn": 65000,
-                "IpAddress": "79.69.154.80",
+                "IpAddress": "92.4.99.28",
                 "Type": "ipsec.1"
             }
         },
@@ -249,8 +452,8 @@
                     "Ref": "NetDevCustGW"
                 },
                 "Type": "ipsec.1",
-                "VpnGatewayId": {
-                    "Ref": "NetDevVPNGW"
+                "TransitGatewayId": {
+                    "Ref": "NetDevTransitGW"
                 },
                 "VpnTunnelOptionsSpecifications": [
                     {
@@ -288,6 +491,28 @@
                 ]
             },
             "DependsOn": "NetDevVPNAttach"
+        },
+        "NetDevTransitGW": {
+            "Type": "AWS::EC2::TransitGateway",
+            "Properties": {
+                "AmazonSideAsn": 64512
+            }
+        },
+        "NetDevTransitGWAttach": {
+            "Type": "AWS::EC2::TransitGatewayAttachment",
+            "Properties": {
+                "TransitGatewayId": {
+                    "Ref": "NetDevTransitGW"
+                },
+                "VpcId": {
+                    "Ref": "NetDevOneVPC"
+                },
+                "SubnetIds": [
+                    {
+                        "Ref": "NetDevOneSubnetOne"
+                    }
+                ]
+            }
         }
     }
 }

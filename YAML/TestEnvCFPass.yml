@@ -4,10 +4,10 @@ Outputs:
     Description: Private (Internal) IP of the EC2 Instance in the NetDevOne VPC for testing purposes.
     Value: !GetAtt NetDevOneEC2.PrivateIp
   NetDevTwoEC2IP:
-    Description: Private (Internal) IP of the EC2 Instance in the NetDevOne VPC for testing purposes.
+    Description: Private (Internal) IP of the EC2 Instance in the NetDevTwo VPC for testing purposes.
     Value: !GetAtt NetDevTwoEC2.PrivateIp
   NetDevThreeEC2IP:
-    Description: Private (Internal) IP of the EC2 Instance in the NetDevOne VPC for testing purposes.
+    Description: Private (Internal) IP of the EC2 Instance in the NetDevTwo VPC for testing purposes.
     Value: !GetAtt NetDevThreeEC2.PrivateIp
 Resources:
   NetDevOneEC2:
@@ -232,11 +232,18 @@ Resources:
       RouteTableId: !Ref NetDevOneRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref NDOneVPCGateway
+  NetDevOneRouteToPrem:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref NetDevOneRouteTable
+      DestinationCidrBlock: 192.168.1.0/24
+      TransitGatewayId: !Ref NetDevTransitGW
+    DependsOn: "NetDevTransitGWAttach"
   NetDevCustGW:
     Type: 'AWS::EC2::CustomerGateway'
     Properties:
       BgpAsn: 65000
-      IpAddress: "79.69.154.80"
+      IpAddress: "92.4.99.28"
       Type: 'ipsec.1'
   NetDevVPNGW:
     Type: 'AWS::EC2::VPNGateway'
@@ -247,7 +254,7 @@ Resources:
     Properties:
       CustomerGatewayId: !Ref NetDevCustGW
       Type: 'ipsec.1'
-      VpnGatewayId: !Ref NetDevVPNGW
+      TransitGatewayId: !Ref NetDevTransitGW
       VpnTunnelOptionsSpecifications:
         -
           PreSharedKey: "1qazxsw2"
@@ -267,3 +274,14 @@ Resources:
       RouteTableIds:
         - !Ref NetDevOneRouteTable
     DependsOn: NetDevVPNAttach
+  NetDevTransitGW:
+    Type: 'AWS::EC2::TransitGateway'
+    Properties:
+      AmazonSideAsn: 64512
+  NetDevTransitGWAttach:
+    Type: 'AWS::EC2::TransitGatewayAttachment'
+    Properties:
+      TransitGatewayId: !Ref NetDevTransitGW
+      VpcId: !Ref NetDevOneVPC
+      SubnetIds:
+        - !Ref NetDevOneSubnetOne
