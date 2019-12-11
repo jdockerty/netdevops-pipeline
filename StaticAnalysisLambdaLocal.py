@@ -2,7 +2,7 @@ import json
 import boto3
 import os
 
-event = {
+job_event = {
   "CodePipeline.job": {
     "data": {
       "artifactCredentials": {
@@ -47,131 +47,114 @@ event = {
     "accountId": "123456789012"
   }
 }
+
+template_event = {'NetDevOneEC2': {'Type': 'AWS::EC2::Instance', 'Properties': {'InstanceType': 't2.micro', 'ImageId': 'ami-00e8b55a2e841be44', 'SubnetId': {'Ref': 'NetDevOneSubnetOne'}, 'KeyName': 'NetDevKeys', 'SecurityGroupIds': [{'Ref': 'NetDevOneSG'}]}}, 'NetDevTwoEC2': {'Type': 'AWS::EC2::Instance', 'Properties': {'InstanceType': 't2.micro', 'ImageId': 'ami-00e8b55a2e841be44', 'SubnetId': {'Ref': 'NetDevTwoSubnetOne'}, 'SecurityGroupIds': [{'Ref': 'NetDevTwoSG'}]}}, 'NetDevOneVPC': {'Type': 'AWS::EC2::VPC', 'Properties': {'CidrBlock': '10.1.0.0/16', 'EnableDnsHostnames': True}}, 'NDOneVPCGateway': {'Type': 'AWS::EC2::InternetGateway', 'Properties': {}}, 'NDOneGatewayAttach': {'Type': 'AWS::EC2::VPCGatewayAttachment', 'Properties': {'InternetGatewayId': {'Ref': 'NDOneVPCGateway'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevTwoVPC': {'Type': 'AWS::EC2::VPC', 'Properties': {'CidrBlock': '10.2.0.0/16', 'EnableDnsHostnames': True}}, 'NetDevOneSubnetOne': {'Type': 'AWS::EC2::Subnet', 'Properties': {'CidrBlock': '10.1.0.0/24', 'MapPublicIpOnLaunch': True, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevTwoSubnetOne': {'Type': 'AWS::EC2::Subnet', 'Properties': {'CidrBlock': '10.2.0.0/24', 'MapPublicIpOnLaunch': True, 'VpcId': {'Ref': 'NetDevTwoVPC'}}}, 'NetDevVPCPeer': {'Type': 'AWS::EC2::VPCPeeringConnection', 'Properties': {'PeerVpcId': {'Ref': 'NetDevTwoVPC'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevOneRouteTable': {'Type': 'AWS::EC2::RouteTable', 'Properties': {'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevOneRTAssoc': {'Type': 'AWS::EC2::SubnetRouteTableAssociation', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'SubnetId': {'Ref': 'NetDevOneSubnetOne'}}}, 'NetDevTwoRouteTable': {'Type': 'AWS::EC2::RouteTable', 'Properties': {'VpcId': {'Ref': 'NetDevTwoVPC'}}}, 'NetDevTwoRTAssoc': {'Type': 'AWS::EC2::SubnetRouteTableAssociation', 'Properties': {'RouteTableId': {'Ref': 'NetDevTwoRouteTable'}, 'SubnetId': {'Ref': 'NetDevTwoSubnetOne'}}}, 'NetDevOneRouteToTwo': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'DestinationCidrBlock': '10.2.0.0/16', 'VpcPeeringConnectionId': {'Ref': 'NetDevVPCPeer'}}}, 'NetDevTwoRouteToTwo': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevTwoRouteTable'}, 'DestinationCidrBlock': '10.1.0.0/16', 'VpcPeeringConnectionId': {'Ref': 'NetDevVPCPeer'}}}, 'NetDevOneSG': {'Type': 'AWS::EC2::SecurityGroup', 'Properties': {'GroupDescription': 'NetDev SG', 'VpcId': {'Ref': 'NetDevOneVPC'}, 'SecurityGroupEgress': [{'IpProtocol': 22, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}, {'IpProtocol': 80, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}], 'SecurityGroupIngress': [{'IpProtocol': 22, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}, {'IpProtocol': 80, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}]}}, 'NetDevTwoSG': {'Type': 'AWS::EC2::SecurityGroup', 'Properties': {'GroupDescription': 'NetDev SG', 'VpcId': {'Ref': 'NetDevTwoVPC'}, 'SecurityGroupEgress': [{'IpProtocol': -1, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}], 'SecurityGroupIngress': [{'IpProtocol': -1, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}]}}, 'NetDevOneDefaultRoute': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'DestinationCidrBlock': '0.0.0.0/0', 'GatewayId': {'Ref': 'NDOneVPCGateway'}}}, 'NetDevCustGW': {'Type': 'AWS::EC2::CustomerGateway', 'Properties': {'BgpAsn': 65000, 'IpAddress': '79.69.154.80', 'Type': 'ipsec.1'}}, 'NetDevVPNGW': {'Type': 'AWS::EC2::VPNGateway', 'Properties': {'Type': 'ipsec.1'}}, 'NetDevVPNConnection': {'Type': 'AWS::EC2::VPNConnection', 'Properties': {'CustomerGatewayId': {'Ref': 'NetDevCustGW'}, 'Type': 'ipsec.1', 'VpnGatewayId': {'Ref': 'NetDevVPNGW'}}}, 'NetDevVPNAttach': {'Type': 'AWS::EC2::VPCGatewayAttachment', 'Properties': {'VpnGatewayId': {'Ref': 'NetDevVPNGW'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevVPNRoutePropagation': {'Type': 'AWS::EC2::VPNGatewayRoutePropagation', 'Properties': {'VpnGatewayId': {'Ref': 'NetDevVPNGW'}, 'RouteTableIds': {'Ref': 'NetDevOneRouteTable'}}, 'DependsOn': 'NetDevVPNAttach'}}
+
 context = 1
-import json
+
 import boto3
-import os
-from nested_lookup import nested_lookup
-from collections.abc import Iterable
 
 code_pipeline = boto3.client('codepipeline')
+job_id = 0
 
 
-def get_resources(event):
-    s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
-                      aws_secret_access_key=os.environ['secret_access_key'])
-    bucket_name = event['CodePipeline.job']['data']['inputArtifacts'][0]['location']['s3Location']['bucketName']
-    data_key = event['CodePipeline.job']['data']['inputArtifacts'][0]['location']['s3Location']['objectKey']
-    data_object = s3.get_object(Bucket=bucket_name, Key=data_key)
-    data_obj_body = data_object['Body']
-    print("Body: ", data_obj_body)
-    print("JSON: ", json.load(data_obj_body, strict=False))
-    print(type(data_obj_body))
-
-    # content = json.loads(data_object['Body'].read().decode('utf-8', 'ignore'))
-    # print("Content Type: ", type(content))
-    # print(content)
-    # print("JSON Content: ", json.load(content))
-    # return (content['Resources'])
 
 
-def flatten_list(nested_obj):
-    flat_list = []
+def parse_CF_basic_check(resources_data):
+    """Parses the CloudFormation resources data for basic information.
 
-    if isinstance(nested_obj, list):
-        for item in nested_obj:
-            if isinstance(item, Iterable) and not isinstance(item, str):
-                flat_list.extend(flatten_list(item))
-            else:
-                flat_list.append(item)
-        return flat_list
-
-    elif isinstance(nested_obj, dict):
-        for item in nested_obj.items():
-            if isinstance(item, dict) and not isinstance(item, str):
-                flat_list.extend(flatten_list(item))
-            else:
-                flat_list.append(item)
-        return flat_list
+    Some very simple checks are conducted on the Cloudformation template, this ensures that other tests are not wasted
+    if the most basic checks are failed. These two tests are: when launching an EC2 instance, an AMI should be provided,
+    and ensuring that a SecurityGroupIngress/Egress does not contain a completely open virtual firewall rule, as this
+    allows everything instead of being granular.
 
 
-def parse_CF_basic_SG(resources_data):
-    standard_keys_check = ['SecurityGroupIngress',
-                           'SecurityGroupEgress']
+    Args:
+        <job_id on live Lambda>: Job_id from CodePipeline.
+        resources_data: The relevant data contained from the 'Resources' key
+        from the JSON CloudFormation template.
 
-    counter = 1
-    response_data = {}
-    for keys_to_check in standard_keys_check:
-        key_val_list = flatten_list(nested_lookup(keys_to_check, resources_data))
-        try:
-            for key, value in key_val_list:
-                if key == 'IpProtocol' and value == -1:
-                    # Stops the ports being complete open, -1 indicates all ports
-                    response_data['SG_SIMPLE_TEST'] = [
-                        {'Job_ID': "IpProtocol_test_{}".format(counter), "Result": "Fail"}]
-                    return response_data
-                else:
-                    response_data['SG_SIMPLE_TEST'] = [
-                        {'Job_ID': "IpProtocol_test_{}".format(counter), "Result": "Pass"}]
-                    return response_data
-        except ValueError:
-            for value in key_val_list:
-                if '255.255.255.255' in value:
-                    # Fail is there a destination to a broadcast address, this shouldn't be allowed.
-                    response_data['DESTINATION_SIMPLE_TEST'] = [
-                        {'Job_ID': "Destination_test_{}".format(counter), "Result": "Fail"}]
-                    return response_data
-                else:
+    Returns:
+        data_response: A dictionary which contains the data property
+        that is checked, the key, and a log about the particular property,
+        this is the value. If there are any errors the job will fail and a value
+        of "ERROR: [message here]" will be tied to the corresponding key.
 
-                    response_data['DESTINATION_SIMPLE_TEST'] = [
-                        {'Job_ID': "Destination_test_{}".format(counter), "Result": "Pass"}]
-
-        counter += 1
-
-
-def parse_CF_network(resources_data):
+    """
+    print(resources_data)
+    data_response = {}
     for key in resources_data.keys():
+        print(resources_data[key]['Type'])
 
-        # Ensure that a Route contains either a RouteTableId AND VpcPeeringConnectionId or VpcId.
-        if 'EC2::Route' in resources_data[key]['Type']:
-            if 'RouteTableId' in resources_data[key]['Properties'] and 'VpcPeeringConnectionId' in resources_data[key][
-                'Properties']:
-                # add pipeline success method here and to others.
-                print("Valid Route")
-            elif 'RouteTableId' in resources_data[key]['Properties'] and 'VpcId' in resources_data[key]['Properties']:
-                print("Valid Route")
-            else:
-                # pipeline_job_fail()
-                return 'Failed'
+        if 'AWS::EC2::Instance' in resources_data[key]['Type']:
+            print(resources_data[key]['Properties'])
+            try:
+                does_ami_exists = resources_data[key]['Properties']['ImageId']
+                data_response['{}-EC2Instance'.format(key)] = 'ImageId is {}'.format(does_ami_exists)
+            except KeyError:
+                data_response['{}-EC2Instance'.format(key)] = 'ERROR: An AMI must be specified.'
+                pipeline_job_fail(job_id)
+                return data_response
+
+        if 'AWS::EC2::SecurityGroup' in resources_data[key]['Type']:
+            try:
+                group_desc_exists = resources_data[key]['Properties']['GroupDescription']
+                data_response['{}-SecurityGroup'.format(key)] = 'GroupDescription is {}'.format(group_desc_exists)
+                if 'SecurityGroupIngress' in resources_data[key]['Properties']:
+                    print("Ingress: ", resources_data[key]['Properties']['SecurityGroupIngress'])
+
+                    for ingress_rule in resources_data[key]['Properties']['SecurityGroupIngress']:
+                        if ingress_rule['IpProtocol'] == -1:
+                            data_response['{}-SecurityGroupIngress'] = 'ERROR: IpProtocol should not be -1, this is completely open.'
+                            pipeline_job_fail(job_id)
+                            return data_response
+
+                if 'SecurityGroupEgress' in resources_data[key]['Properties']:
+                    print("Egress: ", resources_data[key]['Properties']['SecurityGroupEgress'])
+                    for egress_rule in resources_data[key]['Properties']['SecurityGroupEgress']:
+                        if egress_rule['IpProtocol'] == -1:
+                            data_response['{}-SecurityGroupEgress'] = 'ERROR: IpProtocol should not be -1, this is completely open.'
+                            pipeline_job_fail(job_id)
+                            return data_response
+
+            except KeyError:
+                data_response['{}-SecurityGroup'] = 'ERROR: A GroupDescription must be added.'
+                pipeline_job_fail(job_id)
+                return data_response
+
+    pipeline_job_success(job_id)
+    print("End of function")
+    print(data_response)
+    return data_response
 
 
 def pipeline_job_fail(job):
-    code_pipeline.put_job_failure_result(jobId=job, failureDetails={'type': 'JobFailed', 'message': 'string',
-                                                                    'externalExecutionId': 'string'})
-    return
+    """Dummy 'pipeline fail' function call for testing Lambda locally.
 
+    Function is only used by name so that it can be called in the appropriate place locally and then the proper
+    functionality is executed inside of the Lambda.
+
+    Args:
+    job: The job_id which is being provided, locally this will be a value of 0 just for testing purposes.
+
+    Returns:
+        None
+    """
+    pass
 
 def pipeline_job_success(job):
-    code_pipeline.put_job_success_result(jobId=job)
-    return
+    """Dummy 'pipeline success' function call for testing Lambda locally.
+
+    Function is only used by name so that it can be called in the appropriate place locally and then the proper
+    functionality is executed inside of the Lambda.
+
+    Args:
+        job: The job_id which is being provided, locally this will be a value of 0 just for testing purposes.
+
+    Returns:
+        None
+    """
+    pass
 
 
-def static_analysis_file(event, context):
-    try:
-        job_id = event['CodePipeline.job']['id']
-        CF_resources = get_resources(event)
-        check_basic_SG = parse_CF_basic_SG(CF_resources)
-        SG_result = check_basic_SG['SG_SIMPLE_TEST'][0]['Result']
-        if SG_result == 'Fail':
-            pipeline_job_fail(job_id)
-            return 'File did not meet the criteria.'
-        else:
-            pipeline_job_success(job_id)
-            # parse_CF_network(CF_resources)
-            return 'Pass'
-    except Exception as e:
-        print("Error: ", e)
-        pipeline_job_fail(job_id)
-
-static_analysis_file(event,context)
-
+print(parse_CF_basic_check(template_event))

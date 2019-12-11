@@ -45,6 +45,7 @@ def parse_network_CF(resources_data):
 
 
     Args:
+        <job_id on live Lambda>: Job_id from CodePipeline.
         resources_data: The relevant data contained from the 'Resources' key
         from the JSON CloudFormation template.
 
