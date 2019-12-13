@@ -424,7 +424,20 @@
                 "RouteTableId": {
                     "Ref": "NetDevOneRouteTable"
                 },
-                "DestinationCidrBlock": "192.168.1.0/24",
+                "DestinationCidrBlock": "192.168.0.0/16",
+                "TransitGatewayId": {
+                    "Ref": "NetDevTransitGW"
+                }
+            },
+            "DependsOn": "NetDevTransitGWAttach"
+        },
+        "NetDevOneRouteToPremTwo": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "NetDevOneRouteTable"
+                },
+                "DestinationCidrBlock": "172.31.0.0/16",
                 "TransitGatewayId": {
                     "Ref": "NetDevTransitGW"
                 }
@@ -435,7 +448,7 @@
             "Type": "AWS::EC2::CustomerGateway",
             "Properties": {
                 "BgpAsn": 65000,
-                "IpAddress": "92.4.99.28",
+                "IpAddress": "92.17.168.146",
                 "Type": "ipsec.1"
             }
         },
