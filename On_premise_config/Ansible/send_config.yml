@@ -1,0 +1,39 @@
+---
+
+- name: Clean template file
+  hosts: local
+  tasks:
+          - name: Ensure template file is fresh
+            shell: cp /home/jack/NetworkScripts/config_template.txt /home/jack/NetworkScripts/config_template_run.txt
+
+
+- name: Replace  
+  hosts: local
+  tasks:
+          - name: Replace Interface   
+            replace:
+                    path: '/home/jack/NetworkScripts/config_template_run.txt'
+                    regexp: '\{0\}'
+                    replace: '{{ interface }}'
+                    after: '!*'
+          - name: Replace Tunnel \1 Address   
+            replace:
+                    path: '/home/jack/NetworkScripts/config_template_run.txt'
+                    regexp: '\{1\}'
+                    replace: '{{ tun1 }}'
+                    after: '!*'
+          - name: Replace Tunnel \2 Address
+            replace:
+                    path: '/home/jack/NetworkScripts/config_template_run.txt'
+                    regexp: '\{2\}'
+                    replace: '{{ tun2 }}'
+                    after: '!*'
+ 
+- name: Send configuration
+  hosts: router
+  gather_facts: false
+  connection: network_cli
+  tasks:
+          - name: Send config
+            ios_config:
+                    src: "/home/jack/NetworkScripts/config_template_run.txt"
