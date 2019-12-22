@@ -1,13 +1,3 @@
-"""
-###############
-
-
-THIS FILE SERVES AS A WAY TO VIEW THE LIVE LAMBDA FUNCTION CORRESPONDING TO THE BASIC ANALYSIS FOR A CF FILE.
-
-
-###############
-"""
-
 import json
 import boto3
 import os
@@ -43,48 +33,50 @@ def parse_CF_basic_check(job, resources_data):
     """
     print(resources_data)
     data_response = {}
+    error_counter = 0
+    error_keys = []
     for key in resources_data.keys():
-        print(resources_data[key]['Type'])
 
         if 'AWS::EC2::Instance' in resources_data[key]['Type']:
-            print(resources_data[key]['Properties'])
             try:
                 does_ami_exists = resources_data[key]['Properties']['ImageId']
                 data_response['{}-EC2Instance'.format(key)] = 'ImageId is {}'.format(does_ami_exists)
             except KeyError:
-                data_response['{}-EC2Instance'.format(key)] = 'ERROR: An AMI must be specified.'
-                pipeline_job_fail(job)
-                return data_response
+                data_response['{}-EC2Instance'.format(key)] = {"Error": "An AMI must be specified."}
+                error_counter += 1
+                error_keys.append(key)
 
         if 'AWS::EC2::SecurityGroup' in resources_data[key]['Type']:
             try:
                 group_desc_exists = resources_data[key]['Properties']['GroupDescription']
                 data_response['{}-SecurityGroup'.format(key)] = 'GroupDescription is {}'.format(group_desc_exists)
                 if 'SecurityGroupIngress' in resources_data[key]['Properties']:
-                    print("Ingress: ", resources_data[key]['Properties']['SecurityGroupIngress'])
 
                     for ingress_rule in resources_data[key]['Properties']['SecurityGroupIngress']:
                         if ingress_rule['IpProtocol'] == -1:
-                            data_response[
-                                '{}-SecurityGroupIngress'] = 'ERROR: IpProtocol should not be -1, this is completely open.'
-                            pipeline_job_fail(job)
-                            return data_response
+                            data_response['{}-SecurityGroupIngress'.format(key)] = {"Error": "IpProtocol should not be -1, this is completely open."}
+                            error_counter += 1
+                            error_keys.append(key)
 
                 if 'SecurityGroupEgress' in resources_data[key]['Properties']:
-                    print("Egress: ", resources_data[key]['Properties']['SecurityGroupEgress'])
                     for egress_rule in resources_data[key]['Properties']['SecurityGroupEgress']:
                         if egress_rule['IpProtocol'] == -1:
-                            data_response[
-                                '{}-SecurityGroupEgress'] = 'ERROR: IpProtocol should not be -1, this is completely open.'
-                            pipeline_job_fail(job)
-                            return data_response
+                            data_response['{}-SecurityGroupEgress'.format(key)] = {"Error": "IpProtocol should not be -1, this is completely open."}
+                            error_counter += 1
+                            error_keys.append(key)
 
             except KeyError:
-                data_response['{}-SecurityGroup'] = 'ERROR: A GroupDescription must be added.'
-                pipeline_job_fail(job)
-                return data_response
+                data_response['{}-SecurityGroup'.format(key)] = {"Error": "A GroupDescription must be added."}
+                error_counter += 1
+                error_keys.append(key)
 
-    pipeline_job_success(job)
+    if error_counter == 0:
+        data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
+        pipeline_job_success(job)
+    else:
+        data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
+        pipeline_job_fail(job)
+
     print("End of function")
     print(data_response)
     return data_response

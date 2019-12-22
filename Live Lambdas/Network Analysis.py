@@ -1,13 +1,3 @@
-"""
-###############
-
-
-THIS FILE SERVES AS A WAY TO VIEW THE LIVE LAMBDA FUNCTION CORRESPONDING TO THE NETWORK ANALYSIS FOR A CF FILE.
-
-
-###############
-"""
-
 import json
 import boto3
 import os
@@ -47,6 +37,8 @@ def parse_CF_network(job, resources_data):
 
     """
     data_response = {}
+    error_counter = 0
+    error_keys = []
     for key in resources_data.keys():
 
         if 'AWS::EC2::VPC' == resources_data[key]['Type']:
@@ -55,19 +47,20 @@ def parse_CF_network(job, resources_data):
                 vpc_properties = resources_data[key]['Properties']
                 data_response['{}-VPC Properties'.format(key)] = "Properties exist"
                 if 'CidrBlock' in vpc_properties:
-                    if IP(vpc_properties['CidrBlock']).iptype() != "PRIVATE":
-                        pipeline_job_fail(job)
-                        print("Only RFC1918 addresses should be utilised within a VPC.")
-                        data_response['{}-VPC-CidrBlock'.format(key)] = \
-                            "ERROR: Only RFC1918 addresses should be utilised within a VPC."
-                        return data_response
-                    else:
-                        data_response['{}-VPC-CidrBlock'.format(key)] = \
-                            {vpc_properties['CidrBlock']: IP(vpc_properties['CidrBlock']).iptype()}
+                        if IP(vpc_properties['CidrBlock']).iptype() != "PRIVATE":
+                            error_counter += 1
+                            data_response['{}-VPC-CidrBlock'.format(key)] = {"Error": "IP Addresses should only be RFC1918 compliant.",
+                                                                             "Address Type": IP(vpc_properties['Cidr_block']).iptype()}
+                            error_keys.append(key)
+                        else:
+                            data_response['{}-VPC-CidrBlock'.format(key)] = \
+                                {vpc_properties['CidrBlock']: IP(vpc_properties['CidrBlock']).iptype()}
 
             except KeyError:
-                print("Properties is required within a VPC as a CidrBlock is a mandatory element.")
-                data_response['{}-VPC'.format(key)] = "ERROR: VPC Property was not present."
+                data_response['{}-VPC'.format(key)] = {"Error": "VPC Property was not present."}
+                error_counter += 1
+                error_keys.append(key)
+
 
         if 'AWS::EC2::Route' == resources_data[key]['Type']:
             if 'RouteTableId' in resources_data[key]['Properties'] and \
@@ -82,10 +75,10 @@ def parse_CF_network(job, resources_data):
                 data_response['{}-RouteTableId-VpcId'.format(key)] = "Valid Route"
 
             else:
-                pipeline_job_fail(job)
                 data_response['{}-RouteTableId'.format(key)] = \
-                    "ERROR: Either property was not present in the EC2::Route."
-                return data_response
+                    {"Error": "Either property was not present in the EC2::Route."}
+                error_counter += 1
+                error_keys.append(key)
 
         if 'EC2::InternetGateway' in resources_data[key]['Type']:
             try:
@@ -93,10 +86,9 @@ def parse_CF_network(job, resources_data):
                 should_exist = resources_data[key]['Properties']
                 data_response['{}-InternetGateway'.format(key)] = "Properties exist"
             except KeyError:
-                print("The IGW should contain a 'Properties' key, it can be left blank ( {} ), but it must exist.")
-                data_response['{}-InternetGateway'.format(key)] = "ERROR: VpnGatewayId or InternetGatewayId not present"
-                pipeline_job_fail(job)
-                return data_response
+                data_response['{}-InternetGateway'.format(key)] = {"Error": "VpnGatewayId or InternetGatewayId not present."}
+                error_counter += 1
+                error_keys.append(key)
 
         if 'EC2::VPCGatewayAttachment' in resources_data[key]['Type']:
             if 'VpcId' in resources_data[key]['Properties']:
@@ -105,54 +97,56 @@ def parse_CF_network(job, resources_data):
                     'InternetGatewayId' in resources_data[key]['Properties']:
                 data_response['VPCGWAttach-VPN/IGW'] = "VpnGatewayId or InternetGatewayId present"
             else:
-                pipeline_job_fail(job)
-                data_response['{}-VPCGWAttach'.format(key)] = "ERROR: VpnGatewayId or InternetGatewayId not present"
-                print(data_response)
-                return data_response
+                data_response['{}-VPCGWAttach'.format(key)] = {"Error": "VpnGatewayId or InternetGatewayId not present."}
+                error_keys.append(key)
+                error_counter += 1
 
         if 'AWS::EC2::VPNGateway' == resources_data[key]['Type']:
             if 'Type' in resources_data[key]['Properties']:
                 if resources_data[key]['Properties']['Type'] != "ipsec.1":
-                    data_response['{}-VPNGateway'.format(key)] = "ERROR: The only allowed type is 'ipsec.1'."
-                    pipeline_job_fail(job)
-                    return data_response
+                    data_response['{}-VPNGateway'.format(key)] = {"Error": "The only allowed type is 'ipsec.1'."}
+                    error_keys.append(key)
+                    error_counter += 1
                 else:
                     data_response['{}-VPNGateway'.format(key)] = "Valid VPN type present."
 
         if 'AWS::EC2::VPNGatewayRoutePropagation' == resources_data[key]['Type']:
             if 'RouteTableIds' in resources_data[key]['Properties']:
                 if isinstance(resources_data[key]['Properties']['RouteTableIds'], list):
-
                     data_response['{}-VPNGatewayRoutePropagation'.format(key)] = "Value is list of strings."
                 else:
-                    data_response['{}-VPNGatewayRoutePropagation'.format(
-                        key)] = "ERROR: Value must be list of string corresponding to RouteTableIds"
-                    pipeline_job_fail(job)
+                    data_response['{}-VPNGatewayRoutePropagation'.format(key)] = {"Error": "Value must be list of string corresponding to RouteTableIds."}
+                    error_counter += 1
+                    error_keys.append(key)
             if 'VpnGatewayId' in resources_data[key]['Properties']:
                 data_response['{}-VPNGatewayRoutePropagation'.format(key)] = "VpnGatewayId present."
             else:
-                data_response['{}-VPNGatewayRoutePropagation'.format(key)] = "ERROR: VpnGatewayId is required."
-                pipeline_job_fail(job)
-                return data_response
+                data_response['{}-VPNGatewayRoutePropagation'.format(key)] = {"Error": "VpnGatewayId is required."}
+                error_counter += 1
+                error_keys.append(key)
 
         if 'AWS::EC2::VPNConnection' == resources_data[key]['Type']:
             if 'CustomerGatewayId' in resources_data[key]['Properties']:
                 data_response['{}-VPNConnection'.format(key)] = "CustomerGatewayId present."
 
             if 'TransitGatewayId' in resources_data[key]['Properties'] and \
-                    'VpnGatewayId' in resources_data[key]['Properties']:
-                data_response['{}-Transit_AND_VPNGW'.format(
-                    key)] = "ERROR: Both TransitGatewayId AND VpnGatewayId cannot be used within the VPNConnection Type."
-                pipeline_job_fail(job)
-                return data_response
+                'VpnGatewayId' in resources_data[key]['Properties']:
+                    data_response['{}-Transit_AND_VPNGW'.format(key)] = {"Error": "Both TransitGatewayId AND VpnGatewayId cannot be used within the VPNConnection Type."}
+                    error_keys.append(key)
+                    error_counter += 1
 
             if 'TransitGatewayId' in resources_data[key]['Properties'] or \
-                    'VpnGatewayId' in resources_data[key]['Properties']:
-                data_response['{}-Transit_OR_VPNGW'.format(
-                    key)] = "Either TransitGatewayId or VpnGatewayId present, but not both."
+                'VpnGatewayId' in resources_data[key]['Properties']:
+                    data_response['{}-Transit_OR_VPNGW'.format(key)] = "Either TransitGatewayId or VpnGatewayId present, but not both."
 
-    pipeline_job_success(job)
-    print("End of parse function")
+    if error_counter == 0:
+        data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
+        pipeline_job_success(job)
+    else:
+        data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
+        pipeline_job_fail(job)
+    print("End of function")
+    print(data_response)
     return data_response
 
 
