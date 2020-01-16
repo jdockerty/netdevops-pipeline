@@ -15,6 +15,14 @@ This is achieved through a culmination of various technologies and services, the
 * Ansible (On-premise configuration)
 * GNS3 (On-premise network emulation)
 
+### Lambdas
+The main portion of feedback comes from the testing stage, in which 2 Lambdas are used. The first is a basic check, which tests for any glaring issues in the template which need to be addressed, at present these are to ensure that any created EC2's have AMIs and the Security Group's that are created do not have their protocol set to -1, meaning they allow all traffic from anywhere. The second check is more involved and lengthy, this checks many aspects of a provisioned cloud network in respect to it being deployed from a Cloudformation template, some examples include: ensuring that the VPC contains a properties key, even if it is blank; checking that a route is linked to a Route Table, VPC, or VPC peering connection; and that the Internet Gateway contains a properties key, so that it can be created. Along with a few other tests which can be seen in the `Live Lambdas` folder.
+
+Both Lambdas will parse through the whole template before returning. The return value is a JSON blob that will contains the logical ID and check performed, the keys that contained errors are also returned and total error count which need to be addressed. Examples of this are:
+
+* `{'NDOneVPCGateway-InternetGateway': 'Properties exist', 'VPCGWAttach-VpcId': 'VpcId referenced', ...}`
+* `{..., 'Errors': {'Count': '1', 'Keys with errors': ['NetDevVPNRoutePropagation']}}`
+
 ### On-premise
 
 An interesting aspect of the project came from emulating some sort of on-premise network which could be configured for use with the VPN connection and receive the BGP route advertisement for the cloud provisioned CIDR blocks. To achieve this, GNS3 was chosen with a Cisco router image, this router would be acting as the edge device for a business, connecting them to the outside world. For this project, it was used to peer with AWS using BGP over an IPsec tunnel and advertise the on-premise network block over to our AWS resources and vice versa. As this wasn't the main focus of the project, I kept the configuration simple for the on-premise and aimed to ensure connectivity was possible. 
