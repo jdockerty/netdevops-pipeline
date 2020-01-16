@@ -159,12 +159,10 @@ def static_analysis_file(event, context):
     try:
         job_id = event['CodePipeline.job']['id']
         print("Job id:", job_id)
-        # CF_resources = get_resources(event)
         s3_data = event['CodePipeline.job']['data']['inputArtifacts'][0]
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
         print(CF_resources)
         parse_CF_basic_check(job_id, CF_resources)
     except Exception as e:
-        # Any sort of error being raised will cause the job to fail.
         print("Error: ", str(e))
         pipeline_job_fail(job_id)

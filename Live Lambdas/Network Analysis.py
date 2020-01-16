@@ -227,23 +227,14 @@ def network_analysis(event, context):
     try:
         job_id = event['CodePipeline.job']['id']
         print("Job id:", job_id)
-        # CF_resources = get_resources(event)
         s3_data = event['CodePipeline.job']['data']['inputArtifacts'][0]
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
         print(CF_resources)
         network_template_data = parse_CF_network(job_id, CF_resources)
         print(network_template_data)
         return CF_resources
-        # check_network_info = parse_CF_network(CF_resources)
 
-        # if SG_result == 'Fail':
-        #     pipeline_job_fail(job_id)
-        #     return 'File did not meet the criteria.'
-        # else:
-        #     pipeline_job_success(job_id)
-        #     return 'File met criteria, moved to network analysis action.'
 
     except Exception as e:
-        # Any sort of error being raised will cause the job to fail and the error is printed.
         print("Error: ", str(e))
         pipeline_job_fail(job_id)
