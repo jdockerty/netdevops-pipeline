@@ -18,7 +18,7 @@ This is achieved through a culmination of various technologies and services, the
 ### Lambdas
 The main portion of feedback comes from the testing stage, in which 2 Lambdas are used. The first is a basic check, which tests for any glaring issues in the template which need to be addressed, at present these are to ensure that any created EC2's have AMIs and the Security Group's that are created do not have their protocol set to -1, meaning they allow all traffic from anywhere. The second check is more involved and lengthy, this checks many aspects of a provisioned cloud network in respect to it being deployed from a Cloudformation template, some examples include: ensuring that the VPC contains a properties key, even if it is blank; checking that a route is linked to a Route Table, VPC, or VPC peering connection; and that the Internet Gateway contains a properties key, so that it can be created. Along with a few other tests which can be seen in the `Live Lambdas` folder.
 
-Both Lambdas will parse through the whole template before returning. The return value is a JSON blob that will contains the logical ID and check performed, the keys that contained errors are also returned and total error count which need to be addressed. Examples of this are:
+Both Lambdas will parse through the whole template before returning. The return value is a JSON blob that will contains the logical ID and check performed, the keys that contain errors are also returned and a total error count which need to be addressed. Examples of this are:
 
 * `{'NDOneVPCGateway-InternetGateway': 'Properties exist', 'VPCGWAttach-VpcId': 'VpcId referenced', ...}`
 * `{..., 'Errors': {'Count': '1', 'Keys with errors': ['NetDevVPNRoutePropagation']}}`
