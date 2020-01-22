@@ -31,6 +31,12 @@ The diagram below demonstrates the emulated on-premise network design. A CentOS 
 
 ![GNS3 Simple network](https://github.com/jdockerty/UniProject/blob/master/Images/Emulated%20network%20GNS3.png)
 
-At the manual approval stage, this is where the Ansible script was run to configure the router after the appropriate tunnel information and peer addresses were entered. Once this was done, the EC2 instance within the `10.1.0.0/16` CIDR was tested to ping on-premise, this demonstrates reachability to on-premise, thanks to the BGP peering, and back again.
+At the manual approval stage, this is where the Ansible script was run to configure the router after the appropriate tunnel information and peer addresses were entered. The Ansible playbook is executed with the command below, from the `/etc/ansible/playbook/` directory
+
+`ansible-playbook send_config_test.yml -e "interface=[LAN_interface] tun2=[Tunnel 2 IP] tun1=[Tunnel 1 IP]"`
+
+Which executes the YAML contained within the specified file,the `-e` flag being utilised to populate the variables that are contained within the Ansible file at execution time from the command line.
+
+Once this was done, the EC2 instance within the `10.1.0.0/16` CIDR was tested to ping on-premise, this demonstrates reachability to on-premise, due to the BGP peering and prefix advertisement over the IPsec tunnel.
 
 ![Successful ping from AWS](https://github.com/jdockerty/UniProject/blob/master/Images/Ping%20from%20cloud%20to%20onpremise%20loopback%20address.png)
