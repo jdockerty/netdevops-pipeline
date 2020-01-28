@@ -301,6 +301,7 @@ def network_analysis(event, context):
         s3_data = event['CodePipeline.job']['data']['inputArtifacts'][0]
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
         network_template_data = network_check(job_id, CF_resources)
+        print(network_template_data)
         hash_result = hash_data(network_template_data)
         add_to_table(hash_result, network_template_data)
         print("End of Lambda.")

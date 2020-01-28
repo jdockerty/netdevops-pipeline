@@ -231,6 +231,7 @@ def static_analysis_file(event, context):
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
         print(CF_resources)
         data_result = basic_check(job_id, CF_resources)
+        print(data_result)
         hash_result = hash_data(data_result)
         add_to_table(hash_result, data_result)
         print("End of Lambda.")
