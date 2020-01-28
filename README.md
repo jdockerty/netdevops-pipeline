@@ -18,10 +18,12 @@ This is achieved through a culmination of various technologies and services, the
 ### Lambdas
 The main portion of feedback comes from the testing stage, in which 2 Lambdas are used. The first is a basic check, which tests for any glaring issues in the template which need to be addressed, at present these are to ensure that any created EC2's have AMIs and the Security Group's that are created do not have their protocol set to -1, meaning they allow all traffic from anywhere. The second check is more involved and lengthy, this checks many aspects of a provisioned cloud network in respect to it being deployed from a Cloudformation template, some examples include: ensuring that the VPC contains a properties key, even if it is blank; checking that a route is linked to a Route Table, VPC, or VPC peering connection; and that the Internet Gateway contains a properties key, so that it can be created. Along with a few other tests which can be seen in the `Live Lambdas` folder. The `Local Lambdas` were used when writing code offline, by being able to test the overall functionality of parsing through JSON etc. in an easily controlled environment.
 
-Both Lambdas will parse through the whole template before returning. The return value is a JSON blob that will contains the logical ID and check performed, the keys that contain errors are also returned and a total error count which need to be addressed. Examples of this are:
+Both Lambdas will parse through the whole template before returning. Both Lambdas print a JSON blob, to the CloudWatch logs, that contain each logical ID and check performed, the keys that contain errors are also printed and a total error count which need to be addressed. Examples of this are:
 
 * `{'NDOneVPCGateway-InternetGateway': 'Properties exist', 'VPCGWAttach-VpcId': 'VpcId referenced', ...}`
 * `{..., 'Errors': {'Count': '1', 'Keys with errors': ['NetDevVPNRoutePropagation']}}`
+
+At the end of the Lambdas, various items of data are sent to a DynamoDB table. The full data, as above, is encoded in base64 before being sent so as to avoid flooding the table with maps, the original dictionary can be retreived by decoding it when required. A hash of the original dictionary is generated to produce an ID to use within the table, this means that the pipeline data table should only fill when changes are made to the infrastructure via the Cloudformation template file. A check type is also used depending on the Lambda which is sending the data, this is a simple string of _'Basic'_ or _'Network'_ for the respective Lambdas. The error count is also taken from the original dictionary and used within the table. Finally, a timestamp is also generated and sent with the accompanying data.
 
 ### On-premise
 
