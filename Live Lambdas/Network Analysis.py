@@ -3,6 +3,9 @@ import boto3
 import os
 import tempfile
 import zipfile
+import hashlib
+import base64
+from datetime import datetime
 from IPy import IP
 
 # Ensures that CodePipeline and S3 are accessible globally.
@@ -10,8 +13,71 @@ code_pipeline = boto3.client('codepipeline')
 s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
                   aws_secret_access_key=os.environ['secret_access_key'])
 
+dynamodb = boto3.client('dynamodb')
 
-def parse_CF_network(job, resources_data):
+
+def add_to_table(hashID, response_data):
+    """Add the new test to the DynamoDB table with the relevant data alongside it.
+
+    The appropriate data is passed into the function and the relevant data at the time generated from within, such as the
+    current date and time of the test. All of this data is sent to the DynamoDB table.
+
+    The response_data is the whole response which is encoded into Base64 encoding, this provides a representation of the
+    full data in the table and this can be decoded on the data visualisation side, this choice was made so as to ease
+    the process of sending a map, as this is only needed occasionally, the data can be represented in others way and
+    decoded when necessary.
+
+    Args:
+    hashID: A hash which is generated from the hash_data() function.
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        True: Boolean value is returned when the function executes successfully.
+
+    """
+
+    error_count = response_data['Errors']['Count']
+    table_name = "Pipeline_response_data"
+    utf8_dict = str(response_data).encode('utf-8')
+    b64_dict = base64.b64encode(utf8_dict)
+    time_now = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
+
+    # This would produce the original dictionary.
+    # original = eval(base64.b64decode(b64_dict))
+
+    items = {
+        'DataID': {'S': hashID},
+        'Time': {'S': time_now},
+        'Analysis Type': {'S': 'Network'},
+        'Full Encoded Data': {'B': b64_dict},
+        'Error Count': {'N': error_count}
+    }
+    dynamodb.put_item(TableName=table_name, Item=items)
+    print("Data sent to DynamoDB table: ", table_name)
+    return True
+
+
+def hash_data(response_data):
+    """Generates a SHA256 hash of the response_data dictionary to act as the primary key in the DynamoDB table.
+
+    The response_data is hashed in order to generate an ID for the DynamoDB table. This requires the dictionary keys
+    to be sorted and then encoding the dictionary as a mutable object, a JSON string representation of the data.
+
+    Args:
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        hex_digest: A SHA256 hash based on the JSON string representation of the response_data dictionary.
+    """
+
+    string_repr = json.dumps(sorted(response_data.items()), sort_keys=True).encode('utf-8')
+    hashed_data = hashlib.sha256(string_repr)
+    hex_digest = hashed_data.hexdigest()
+    print("Hash generated: ", hex_digest)
+    return hex_digest
+
+
+def network_check(job, resources_data):
     """Parses the CloudFormation resources data for network information.
 
     Various checks are conducted on the Cloudformation template within the scope
@@ -47,20 +113,20 @@ def parse_CF_network(job, resources_data):
                 vpc_properties = resources_data[key]['Properties']
                 data_response['{}-VPC Properties'.format(key)] = "Properties exist"
                 if 'CidrBlock' in vpc_properties:
-                        if IP(vpc_properties['CidrBlock']).iptype() != "PRIVATE":
-                            error_counter += 1
-                            data_response['{}-VPC-CidrBlock'.format(key)] = {"Error": "IP Addresses should only be RFC1918 compliant.",
-                                                                             "Address Type": IP(vpc_properties['Cidr_block']).iptype()}
-                            error_keys.append(key)
-                        else:
-                            data_response['{}-VPC-CidrBlock'.format(key)] = \
-                                {vpc_properties['CidrBlock']: IP(vpc_properties['CidrBlock']).iptype()}
+                    if IP(vpc_properties['CidrBlock']).iptype() != "PRIVATE":
+                        error_counter += 1
+                        data_response['{}-VPC-CidrBlock'.format(key)] = {
+                            "Error": "IP Addresses should only be RFC1918 compliant.",
+                            "Address Type": IP(vpc_properties['Cidr_block']).iptype()}
+                        error_keys.append(key)
+                    else:
+                        data_response['{}-VPC-CidrBlock'.format(key)] = \
+                            {vpc_properties['CidrBlock']: IP(vpc_properties['CidrBlock']).iptype()}
 
             except KeyError:
                 data_response['{}-VPC'.format(key)] = {"Error": "VPC Property was not present."}
                 error_counter += 1
                 error_keys.append(key)
-
 
         if 'AWS::EC2::Route' == resources_data[key]['Type']:
             if 'RouteTableId' in resources_data[key]['Properties'] and \
@@ -86,7 +152,8 @@ def parse_CF_network(job, resources_data):
                 should_exist = resources_data[key]['Properties']
                 data_response['{}-InternetGateway'.format(key)] = "Properties exist"
             except KeyError:
-                data_response['{}-InternetGateway'.format(key)] = {"Error": "VpnGatewayId or InternetGatewayId not present."}
+                data_response['{}-InternetGateway'.format(key)] = {
+                    "Error": "VpnGatewayId or InternetGatewayId not present."}
                 error_counter += 1
                 error_keys.append(key)
 
@@ -97,7 +164,8 @@ def parse_CF_network(job, resources_data):
                     'InternetGatewayId' in resources_data[key]['Properties']:
                 data_response['VPCGWAttach-VPN/IGW'] = "VpnGatewayId or InternetGatewayId present"
             else:
-                data_response['{}-VPCGWAttach'.format(key)] = {"Error": "VpnGatewayId or InternetGatewayId not present."}
+                data_response['{}-VPCGWAttach'.format(key)] = {
+                    "Error": "VpnGatewayId or InternetGatewayId not present."}
                 error_keys.append(key)
                 error_counter += 1
 
@@ -115,7 +183,8 @@ def parse_CF_network(job, resources_data):
                 if isinstance(resources_data[key]['Properties']['RouteTableIds'], list):
                     data_response['{}-VPNGatewayRoutePropagation'.format(key)] = "Value is list of strings."
                 else:
-                    data_response['{}-VPNGatewayRoutePropagation'.format(key)] = {"Error": "Value must be list of string corresponding to RouteTableIds."}
+                    data_response['{}-VPNGatewayRoutePropagation'.format(key)] = {
+                        "Error": "Value must be list of string corresponding to RouteTableIds."}
                     error_counter += 1
                     error_keys.append(key)
             if 'VpnGatewayId' in resources_data[key]['Properties']:
@@ -130,14 +199,16 @@ def parse_CF_network(job, resources_data):
                 data_response['{}-VPNConnection'.format(key)] = "CustomerGatewayId present."
 
             if 'TransitGatewayId' in resources_data[key]['Properties'] and \
-                'VpnGatewayId' in resources_data[key]['Properties']:
-                    data_response['{}-Transit_AND_VPNGW'.format(key)] = {"Error": "Both TransitGatewayId AND VpnGatewayId cannot be used within the VPNConnection Type."}
-                    error_keys.append(key)
-                    error_counter += 1
+                    'VpnGatewayId' in resources_data[key]['Properties']:
+                data_response['{}-Transit_AND_VPNGW'.format(key)] = {
+                    "Error": "Both TransitGatewayId AND VpnGatewayId cannot be used within the VPNConnection Type."}
+                error_keys.append(key)
+                error_counter += 1
 
             if 'TransitGatewayId' in resources_data[key]['Properties'] or \
-                'VpnGatewayId' in resources_data[key]['Properties']:
-                    data_response['{}-Transit_OR_VPNGW'.format(key)] = "Either TransitGatewayId or VpnGatewayId present, but not both."
+                    'VpnGatewayId' in resources_data[key]['Properties']:
+                data_response['{}-Transit_OR_VPNGW'.format(
+                    key)] = "Either TransitGatewayId or VpnGatewayId present, but not both."
 
     if error_counter == 0:
         data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
@@ -145,7 +216,7 @@ def parse_CF_network(job, resources_data):
     else:
         data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
         pipeline_job_fail(job)
-    print("End of function")
+    print("End of check function")
     print(data_response)
     return data_response
 
@@ -229,12 +300,11 @@ def network_analysis(event, context):
         print("Job id:", job_id)
         s3_data = event['CodePipeline.job']['data']['inputArtifacts'][0]
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
-        print(CF_resources)
-        network_template_data = parse_CF_network(job_id, CF_resources)
-        print(network_template_data)
-        return CF_resources
-
-
+        network_template_data = network_check(job_id, CF_resources)
+        hash_result = hash_data(network_template_data)
+        add_to_table(hash_result, network_template_data)
+        print("End of Lambda.")
     except Exception as e:
+        # Any sort of error being raised will cause the job to fail and the error is printed.
         print("Error: ", str(e))
         pipeline_job_fail(job_id)

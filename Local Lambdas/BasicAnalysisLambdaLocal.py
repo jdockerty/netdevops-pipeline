@@ -1,6 +1,5 @@
 import json
-import boto3
-import os
+import hashlib
 
 job_event = {
   "CodePipeline.job": {
@@ -49,16 +48,75 @@ job_event = {
 }
 
 template_event = {'NetDevOneEC2': {'Type': 'AWS::EC2::Instance', 'Properties': {'InstanceType': 't2.micro', 'ImageId': 'ami-00e8b55a2e841be44', 'SubnetId': {'Ref': 'NetDevOneSubnetOne'}, 'KeyName': 'NetDevKeys', 'SecurityGroupIds': [{'Ref': 'NetDevOneSG'}]}}, 'NetDevTwoEC2': {'Type': 'AWS::EC2::Instance', 'Properties': {'InstanceType': 't2.micro', 'ImageId': 'ami-00e8b55a2e841be44', 'SubnetId': {'Ref': 'NetDevTwoSubnetOne'}, 'SecurityGroupIds': [{'Ref': 'NetDevTwoSG'}]}}, 'NetDevOneVPC': {'Type': 'AWS::EC2::VPC', 'Properties': {'CidrBlock': '10.1.0.0/16', 'EnableDnsHostnames': True}}, 'NDOneVPCGateway': {'Type': 'AWS::EC2::InternetGateway', 'Properties': {}}, 'NDOneGatewayAttach': {'Type': 'AWS::EC2::VPCGatewayAttachment', 'Properties': {'InternetGatewayId': {'Ref': 'NDOneVPCGateway'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevTwoVPC': {'Type': 'AWS::EC2::VPC', 'Properties': {'CidrBlock': '10.2.0.0/16', 'EnableDnsHostnames': True}}, 'NetDevOneSubnetOne': {'Type': 'AWS::EC2::Subnet', 'Properties': {'CidrBlock': '10.1.0.0/24', 'MapPublicIpOnLaunch': True, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevTwoSubnetOne': {'Type': 'AWS::EC2::Subnet', 'Properties': {'CidrBlock': '10.2.0.0/24', 'MapPublicIpOnLaunch': True, 'VpcId': {'Ref': 'NetDevTwoVPC'}}}, 'NetDevVPCPeer': {'Type': 'AWS::EC2::VPCPeeringConnection', 'Properties': {'PeerVpcId': {'Ref': 'NetDevTwoVPC'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevOneRouteTable': {'Type': 'AWS::EC2::RouteTable', 'Properties': {'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevOneRTAssoc': {'Type': 'AWS::EC2::SubnetRouteTableAssociation', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'SubnetId': {'Ref': 'NetDevOneSubnetOne'}}}, 'NetDevTwoRouteTable': {'Type': 'AWS::EC2::RouteTable', 'Properties': {'VpcId': {'Ref': 'NetDevTwoVPC'}}}, 'NetDevTwoRTAssoc': {'Type': 'AWS::EC2::SubnetRouteTableAssociation', 'Properties': {'RouteTableId': {'Ref': 'NetDevTwoRouteTable'}, 'SubnetId': {'Ref': 'NetDevTwoSubnetOne'}}}, 'NetDevOneRouteToTwo': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'DestinationCidrBlock': '10.2.0.0/16', 'VpcPeeringConnectionId': {'Ref': 'NetDevVPCPeer'}}}, 'NetDevTwoRouteToTwo': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevTwoRouteTable'}, 'DestinationCidrBlock': '10.1.0.0/16', 'VpcPeeringConnectionId': {'Ref': 'NetDevVPCPeer'}}}, 'NetDevOneSG': {'Type': 'AWS::EC2::SecurityGroup', 'Properties': {'GroupDescription': 'NetDev SG', 'VpcId': {'Ref': 'NetDevOneVPC'}, 'SecurityGroupEgress': [{'IpProtocol': 22, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}, {'IpProtocol': 80, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}], 'SecurityGroupIngress': [{'IpProtocol': 22, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}, {'IpProtocol': 80, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}]}}, 'NetDevTwoSG': {'Type': 'AWS::EC2::SecurityGroup', 'Properties': {'GroupDescription': 'NetDev SG', 'VpcId': {'Ref': 'NetDevTwoVPC'}, 'SecurityGroupEgress': [{'IpProtocol': -1, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}], 'SecurityGroupIngress': [{'IpProtocol': -1, 'FromPort': 0, 'ToPort': 65535, 'CidrIp': '0.0.0.0/0'}]}}, 'NetDevOneDefaultRoute': {'Type': 'AWS::EC2::Route', 'Properties': {'RouteTableId': {'Ref': 'NetDevOneRouteTable'}, 'DestinationCidrBlock': '0.0.0.0/0', 'GatewayId': {'Ref': 'NDOneVPCGateway'}}}, 'NetDevCustGW': {'Type': 'AWS::EC2::CustomerGateway', 'Properties': {'BgpAsn': 65000, 'IpAddress': '79.69.154.80', 'Type': 'ipsec.1'}}, 'NetDevVPNGW': {'Type': 'AWS::EC2::VPNGateway', 'Properties': {'Type': 'ipsec.1'}}, 'NetDevVPNConnection': {'Type': 'AWS::EC2::VPNConnection', 'Properties': {'CustomerGatewayId': {'Ref': 'NetDevCustGW'}, 'Type': 'ipsec.1', 'VpnGatewayId': {'Ref': 'NetDevVPNGW'}}}, 'NetDevVPNAttach': {'Type': 'AWS::EC2::VPCGatewayAttachment', 'Properties': {'VpnGatewayId': {'Ref': 'NetDevVPNGW'}, 'VpcId': {'Ref': 'NetDevOneVPC'}}}, 'NetDevVPNRoutePropagation': {'Type': 'AWS::EC2::VPNGatewayRoutePropagation', 'Properties': {'VpnGatewayId': {'Ref': 'NetDevVPNGW'}, 'RouteTableIds': {'Ref': 'NetDevOneRouteTable'}}, 'DependsOn': 'NetDevVPNAttach'}}
+response_data_test = {'NetDevOneVPC-VPC': 'Present', 'NetDevOneVPC-VPC Properties': 'Properties exist', 'NetDevOneVPC-VPC-CidrBlock': {'10.1.0.0/16': 'PRIVATE'}, 'NDOneVPCGateway-InternetGateway': 'Properties exist', 'VPCGWAttach-VpcId': 'VpcId referenced', 'VPCGWAttach-VPN/IGW': 'VpnGatewayId or InternetGatewayId present', 'NetDevTwoVPC-VPC': 'Present', 'NetDevTwoVPC-VPC Properties': 'Properties exist', 'NetDevTwoVPC-VPC-CidrBlock': {'10.2.0.0/16': 'PRIVATE'}, 'NetDevOneRouteToTwo-RouteTableId-VpcPeeringConnection': 'Valid Route', 'NetDevTwoRouteToTwo-RouteTableId-VpcPeeringConnection': 'Valid Route', 'NetDevOneDefaultRoute-RouteTableId-VpcId': 'Valid Route', 'NetDevVPNGW-VPNGateway': 'Valid VPN type present.', 'NetDevVPNConnection-VPNConnection': 'CustomerGatewayId present.', 'NetDevVPNConnection-Transit_OR_VPNGW': 'Either TransitGatewayId or VpnGatewayId present, but not both.', 'NetDevVPNRoutePropagation-VPNGatewayRoutePropagation': 'VpnGatewayId present.', 'Errors': {'Count': '1', 'Keys with errors': ['NetDevVPNRoutePropagation']}}
 
 context = 1
 
-import boto3
+import boto3 # Not required inside of Live Lambda
+import base64
+from datetime import datetime
 
 code_pipeline = boto3.client('codepipeline')
+dynamodb = boto3.client('dynamodb')
 job = 0
 
+def add_to_table(hashID, response_data):
+    """Add the new test to the DynamoDB table with the relevant data alongside it.
 
+    The appropriate data is passed into the function and the relevant data at the time generated from within, such as the
+    current date and time of the test. All of this data is sent to the DynamoDB table.
 
+    The response_data is the whole response which is encoded into Base64 encoding, this provides a representation of the
+    full data in the table and this can be decoded on the data visualisation side, this choice was made so as to ease
+    the process of sending a map, as this is only needed occasionally, the data can be represented in others way and
+    decoded when necessary.
+
+    Args:
+    hashID: A hash which is generated from the hash_data() function.
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        True: Boolean value is returned when the function executes successfully.
+
+    """
+
+    error_count = response_data['Errors']['Count']
+    table_name = "Pipeline_response_data"
+    utf8_dict = str(response_data).encode('utf-8')
+    b64_dict = base64.b64encode(utf8_dict)
+    time_now = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
+
+    # This would produce the original dictionary.
+    # original = eval(base64.b64decode(b64_dict))
+
+    items = {
+        'DataID': {'S': hashID},
+        'Time': {'S': time_now},
+        'Analysis Type': {'S': 'Basic'},
+        'Full Encoded Data': {'B': b64_dict},
+        'Error Count': {'N': error_count}
+    }
+    dynamodb.put_item(TableName=table_name, Item=items)
+    return True
+
+def hash_data(response_data):
+    """Generates a SHA256 hash of the response_data dictionary to act as the primary key in the DynamoDB table.
+
+    The response_data is hashed in order to generate an ID for the DynamoDB table. This requires the dictionary keys
+    to be sorted and then encoding the dictionary as a mutable object, a JSON string representation of the data.
+
+    Args:
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        hex_digest: A SHA256 hash based on the JSON string representation of the response_data dictionary.
+    """
+
+    string_repr = json.dumps(sorted(response_data.items()), sort_keys=True).encode('utf-8')
+    hashed_data = hashlib.sha256(string_repr)
+    hex_digest = hashed_data.hexdigest()
+    print(hex_digest)
+    return hex_digest
 
 def parse_CF_basic_check(resources_data):
     """Parses the CloudFormation resources data for basic information.
@@ -160,5 +218,6 @@ def pipeline_job_success(job):
     """
     pass
 
-
+hash = hash_data(response_data_test)
 print(parse_CF_basic_check(template_event))
+add_to_table(hash, response_data_test)

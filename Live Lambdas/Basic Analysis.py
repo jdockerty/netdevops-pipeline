@@ -3,14 +3,80 @@ import boto3
 import os
 import tempfile
 import zipfile
+import base64
+import hashlib
+from datetime import datetime
 
 # Ensures that CodePipeline and S3 are accessible globally.
 code_pipeline = boto3.client('codepipeline')
 s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
                   aws_secret_access_key=os.environ['secret_access_key'])
 
+dynamodb = boto3.client('dynamodb')
 
-def parse_CF_basic_check(job, resources_data):
+
+def add_to_table(hashID, response_data):
+    """Add the new test to the DynamoDB table with the relevant data alongside it.
+
+    The appropriate data is passed into the function and the relevant data at the time generated from within, such as the
+    current date and time of the test. All of this data is sent to the DynamoDB table.
+
+    The response_data is the whole response which is encoded into Base64 encoding, this provides a representation of the
+    full data in the table and this can be decoded on the data visualisation side, this choice was made so as to ease
+    the process of sending a map, as this is only needed occasionally, the data can be represented in others way and
+    decoded when necessary.
+
+    Args:
+    hashID: A hash which is generated from the hash_data() function.
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        True: Boolean value is returned when the function executes successfully.
+
+    """
+
+    error_count = response_data['Errors']['Count']
+    table_name = "Pipeline_response_data"
+    utf8_dict = str(response_data).encode('utf-8')
+    b64_dict = base64.b64encode(utf8_dict)
+    time_now = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
+
+    # This would produce the original dictionary.
+    # original = eval(base64.b64decode(b64_dict))
+
+    items = {
+        'DataID': {'S': hashID},
+        'Time': {'S': time_now},
+        'Analysis Type': {'S': 'Basic'},
+        'Full Encoded Data': {'B': b64_dict},
+        'Error Count': {'N': error_count}
+    }
+    dynamodb.put_item(TableName=table_name, Item=items)
+    print("Data sent to DynamoDB table: ", table_name)
+    return True
+
+
+def hash_data(response_data):
+    """Generates a SHA256 hash of the response_data dictionary to act as the primary key in the DynamoDB table.
+
+    The response_data is hashed in order to generate an ID for the DynamoDB table. This requires the dictionary keys
+    to be sorted and then encoding the dictionary as a mutable object, a JSON string representation of the data.
+
+    Args:
+    response_data: Dictionary built from analysing the file.
+
+    Returns:
+        hex_digest: A SHA256 hash based on the JSON string representation of the response_data dictionary.
+    """
+
+    string_repr = json.dumps(sorted(response_data.items()), sort_keys=True).encode('utf-8')
+    hashed_data = hashlib.sha256(string_repr)
+    hex_digest = hashed_data.hexdigest()
+    print("Hash generated: ", hex_digest)
+    return hex_digest
+
+
+def basic_check(job, resources_data):
     """Parses the CloudFormation resources data for basic information.
 
     Some very simple checks are conducted on the Cloudformation template, this ensures that other tests are not wasted
@@ -54,14 +120,16 @@ def parse_CF_basic_check(job, resources_data):
 
                     for ingress_rule in resources_data[key]['Properties']['SecurityGroupIngress']:
                         if ingress_rule['IpProtocol'] == -1:
-                            data_response['{}-SecurityGroupIngress'.format(key)] = {"Error": "IpProtocol should not be -1, this is completely open."}
+                            data_response['{}-SecurityGroupIngress'.format(key)] = {
+                                "Error": "IpProtocol should not be -1, this is completely open."}
                             error_counter += 1
                             error_keys.append(key)
 
                 if 'SecurityGroupEgress' in resources_data[key]['Properties']:
                     for egress_rule in resources_data[key]['Properties']['SecurityGroupEgress']:
                         if egress_rule['IpProtocol'] == -1:
-                            data_response['{}-SecurityGroupEgress'.format(key)] = {"Error": "IpProtocol should not be -1, this is completely open."}
+                            data_response['{}-SecurityGroupEgress'.format(key)] = {
+                                "Error": "IpProtocol should not be -1, this is completely open."}
                             error_counter += 1
                             error_keys.append(key)
 
@@ -77,8 +145,7 @@ def parse_CF_basic_check(job, resources_data):
         data_response['Errors'] = {"Count": "{}".format(error_counter), "Keys with errors": error_keys}
         pipeline_job_fail(job)
 
-    print("End of function")
-    print(data_response)
+    print("End of check function")
     return data_response
 
 
@@ -159,10 +226,15 @@ def static_analysis_file(event, context):
     try:
         job_id = event['CodePipeline.job']['id']
         print("Job id:", job_id)
+        # CF_resources = get_resources(event)
         s3_data = event['CodePipeline.job']['data']['inputArtifacts'][0]
         CF_resources = json.loads(get_template_from_zip(s3_data))['Resources']
         print(CF_resources)
-        parse_CF_basic_check(job_id, CF_resources)
+        data_result = basic_check(job_id, CF_resources)
+        hash_result = hash_data(data_result)
+        add_to_table(hash_result, data_result)
+        print("End of Lambda.")
     except Exception as e:
+        # Any sort of error being raised will cause the job to fail.
         print("Error: ", str(e))
         pipeline_job_fail(job_id)
