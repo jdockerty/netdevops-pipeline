@@ -4,11 +4,10 @@ import os
 import tempfile
 import zipfile
 import hashlib
-import base64
 from datetime import datetime
 from IPy import IP
 
-# Ensures that CodePipeline and S3 are accessible globally.
+# Ensures that CodePipeline, S3, and DynamoDB are accessible globally.
 code_pipeline = boto3.client('codepipeline')
 s3 = boto3.client('s3', aws_access_key_id=os.environ['access_key'],
                   aws_secret_access_key=os.environ['secret_access_key'])
@@ -22,10 +21,8 @@ def add_to_table(hashID, response_data):
     The appropriate data is passed into the function and the relevant data at the time generated from within, such as the
     current date and time of the test. All of this data is sent to the DynamoDB table.
 
-    The response_data is the whole response which is encoded into Base64 encoding, this provides a representation of the
-    full data in the table and this can be decoded on the data visualisation side, this choice was made so as to ease
-    the process of sending a map, as this is only needed occasionally, the data can be represented in others way and
-    decoded when necessary.
+    The response_data is the whole response, serialised as JSON string. This provides a representation of the
+    full data in the table and can be decoded when necessary for log purposes.
 
     Args:
     hashID: A hash which is generated from the hash_data() function.
@@ -38,18 +35,14 @@ def add_to_table(hashID, response_data):
 
     error_count = response_data['Errors']['Count']
     table_name = "Pipeline_response_data"
-    utf8_dict = str(response_data).encode('utf-8')
-    b64_dict = base64.b64encode(utf8_dict)
+    json_repr = json.dumps(response_data)
     time_now = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
-
-    # This would produce the original dictionary.
-    # original = eval(base64.b64decode(b64_dict))
 
     items = {
         'DataID': {'S': hashID},
         'Time': {'S': time_now},
-        'Analysis Type': {'S': 'Network'},
-        'Full Encoded Data': {'B': b64_dict},
+        'Check Type': {'S': 'Network'},
+        'Full JSON Data': {'S': json_repr},
         'Error Count': {'N': error_count}
     }
     dynamodb.put_item(TableName=table_name, Item=items)
