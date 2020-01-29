@@ -4,7 +4,10 @@
 The project presents an implementation/proof of concept of applying a CI/CD pipeline, taken from the aspects and principles of DevOps, and applying it to a Cloudformation template which contains network-centric infrastrucutre under test: VPC, CIDR blocks, a Site-to-Site VPN through Transit Gateway etc. Although this could be modified and/or extended to also include security aspects such as IAM roles/permission or anything else which is able to be placed into a Cloudformation template. 
 
 The diagram shows the flow of the current implementation.
-![Project Diagram](https://github.com/jdockerty/UniProject/blob/master/Images/NetDevOps%20Pipeline%20Diagram.png)
+
+<p align="center">
+<img src="https://github.com/jdockerty/UniProject/blob/master/Images/NetDevOps%20Pipeline%20Diagram.png">
+</p>
 
 This is achieved through a culmination of various technologies and services, they are as follows:
 * CodePipeline (CI/CD service)
@@ -23,7 +26,11 @@ Both Lambdas will parse through the whole template before returning. Both Lambda
 * `{'NDOneVPCGateway-InternetGateway': 'Properties exist', 'VPCGWAttach-VpcId': 'VpcId referenced', ...}`
 * `{..., 'Errors': {'Count': '1', 'Keys with errors': ['NetDevVPNRoutePropagation']}}`
 
-At the end of the Lambdas, various items of data are sent to a DynamoDB table. The full data, as above, is encoded as a JSON string before being sent, the original dictionary may be required for log purposes and can be retreived by de-serialising it. A hash of the original dictionary is generated to produce an ID to use within the table, this means that the pipeline data table should only fill when changes are made to the infrastructure via the Cloudformation template file. A check type is also used depending on the Lambda which is sending the data, this is a simple string of _'Basic'_ or _'Network'_ for the respective Lambdas. The error count is also taken from the original dictionary and used within the table. Finally, a timestamp is also generated and sent with the accompanying data.
+At the end of the Lambdas, various items of data are sent to a DynamoDB table. The full data, as above, is encoded as a JSON string before being sent, the original dictionary may be required for log purposes and can be retreived by de-serialising it. A hash of the original dictionary is generated to produce an ID to use within the table, this means that the pipeline data table should only fill when changes are made to the infrastructure via the Cloudformation template file. A check type is also used depending on the Lambda which is sending the data, this is a simple string of _'Basic'_ or _'Network'_ for the respective Lambdas. The error count is also taken from the original dictionary and used within the table. Finally, a timestamp is also generated and sent with the accompanying data. This data can be used to create a simple chart, plotting the timestamp against the error count, as demonstrated below. The code for this can be found in the `Chart Code` folder.
+
+<p align="center">
+<img src="https://github.com/jdockerty/netdevopspipeline/blob/master/Images/SampleChart.png">
+</p>
 
 ### On-premise
 
@@ -31,7 +38,9 @@ An interesting aspect of the project came from emulating some sort of on-premise
 
 The diagram below demonstrates the emulated on-premise network design. A CentOS machine, configured with Ansible, is connected to the router for ease of configuration when the AWS network resources are deployed. The CIDR range of `172.31.0.0/30` is used on a virtual loopback interface on the router for testing purposes, this is sent out as a prefix advertisement by BGP. Whilst a larger prefix would be used in an enterprise environment, the main concern was ensuring that the router was a BGP speaker and would peer with its AWS counterpart, forming a neighbourship, and advertising the prefix.
 
-![GNS3 Simple network](https://github.com/jdockerty/UniProject/blob/master/Images/Emulated%20network%20GNS3.png)
+<p align="center">
+  <img src="https://github.com/jdockerty/UniProject/blob/master/Images/Emulated%20network%20GNS3.png">
+</p>
 
 At the manual approval stage, this is where the Ansible script was run to configure the router after the appropriate tunnel information and peer addresses were entered. The Ansible playbook is executed with the command below, from the `/etc/ansible/playbook/` directory
 
@@ -41,4 +50,6 @@ Which executes the YAML contained within the specified file,the `-e` flag being 
 
 Once this was done, the EC2 instance within the `10.1.0.0/16` CIDR was tested to ping on-premise, this demonstrates reachability to on-premise, due to the BGP peering and prefix advertisement over the IPsec tunnel.
 
-![Successful ping from AWS](https://github.com/jdockerty/UniProject/blob/master/Images/Ping%20from%20cloud%20to%20onpremise%20loopback%20address.png)
+<p align="center">
+  <img src="https://github.com/jdockerty/UniProject/blob/master/Images/Ping%20from%20cloud%20to%20onpremise%20loopback%20address.png">
+</p>
